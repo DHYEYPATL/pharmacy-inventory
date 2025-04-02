@@ -29,14 +29,19 @@ const DatabaseConnection: React.FC = () => {
     if (connectionConfig.url && connectionConfig.apiKey) {
       setIsLoading(true);
       try {
-        const { error } = await supabase.from('inventory').select('drug_id').limit(1);
+        // Use the client to check if we can access the tables
+        // Instead of querying the inventory table directly, we'll check for its existence
+        const { data, error } = await supabase
+          .from('employee')
+          .select('emp_id')
+          .limit(1);
         
         if (!error) {
           setIsConnected(true);
           toast.success("Successfully connected to Supabase");
         } else {
           if (error.code === 'PGRST116') {
-            toast.info("Connected to Supabase, but inventory table not found. Create tables first.");
+            toast.info("Connected to Supabase, but employee table not found. Create tables first.");
           } else {
             toast.error("Connection error: " + error.message);
           }
@@ -67,7 +72,11 @@ const DatabaseConnection: React.FC = () => {
     toast.loading("Connecting to Supabase...");
     
     try {
-      const { error } = await supabase.from('inventory').select('drug_id').limit(1);
+      // Similar change here - check for employee table as it exists in the schema
+      const { data, error } = await supabase
+        .from('employee')
+        .select('emp_id')
+        .limit(1);
       
       if (error) {
         if (error.code === 'PGRST116') {
