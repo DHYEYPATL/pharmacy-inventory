@@ -1,28 +1,43 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Database } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface ConnectionConfig {
-  host: string;
-  port: string;
-  database: string;
-  username: string;
-  password: string;
+  url: string;
+  apiKey: string;
 }
 
 const DatabaseConnection: React.FC = () => {
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
-    host: 'localhost',
-    port: '3306',
-    database: 'pharmacy_db',
-    username: '',
-    password: ''
+    url: import.meta.env.VITE_SUPABASE_URL || '',
+    apiKey: ''
   });
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Check if we're already connected on component load
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        try {
+          const { data, error } = await supabase.from('pharmacy_info').select('*').limit(1);
+          if (!error) {
+            setIsConnected(true);
+            toast.success("Already connected to Supabase");
+          }
+        } catch (error) {
+          // Connection failed, but no need to show an error since we're just checking
+        }
+      }
+    };
+    
+    checkConnection();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,16 +47,27 @@ const DatabaseConnection: React.FC = () => {
     }));
   };
 
-  const handleConnect = () => {
-    // This would be where you'd actually connect to a database
-    // For demo purposes, we'll just simulate a connection
-    toast.loading("Connecting to database...");
+  const handleConnect = async () => {
+    setIsLoading(true);
+    toast.loading("Connecting to Supabase...");
     
-    // Simulating connection delay
-    setTimeout(() => {
+    try {
+      // Test the connection by making a simple query
+      const { data, error } = await supabase.from('pharmacy_info').select('*').limit(1);
+      
+      if (error) {
+        toast.error("Connection failed: " + error.message);
+        setIsLoading(false);
+        return;
+      }
+      
       setIsConnected(true);
-      toast.success("Successfully connected to database");
-    }, 1500);
+      toast.success("Successfully connected to Supabase");
+    } catch (error) {
+      toast.error("Connection failed: " + (error as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -49,71 +75,58 @@ const DatabaseConnection: React.FC = () => {
       <CardHeader className="bg-pharmacy-primary text-white rounded-t-lg">
         <CardTitle className="flex items-center gap-2">
           <Database size={20} />
-          <span>Database Connection</span>
+          <span>Supabase Connection</span>
         </CardTitle>
+        <CardDescription className="text-white/80">
+          Connect to your Supabase database
+        </CardDescription>
       </CardHeader>
       <CardContent className="pt-6 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label htmlFor="host" className="text-sm font-medium">Host</label>
-            <Input 
-              id="host" 
-              name="host"
-              value={connectionConfig.host} 
-              onChange={handleInputChange}
-              placeholder="e.g. localhost"
-            />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor="port" className="text-sm font-medium">Port</label>
-            <Input
-              id="port"
-              name="port"
-              value={connectionConfig.port}
-              onChange={handleInputChange}
-              placeholder="e.g. 3306"
-            />
-          </div>
-        </div>
         <div className="space-y-2">
-          <label htmlFor="database" className="text-sm font-medium">Database Name</label>
-          <Input
-            id="database"
-            name="database"
-            value={connectionConfig.database}
+          <label htmlFor="url" className="text-sm font-medium">Supabase URL</label>
+          <Input 
+            id="url" 
+            name="url"
+            value={connectionConfig.url} 
             onChange={handleInputChange}
-            placeholder="e.g. pharmacy_db"
+            placeholder="https://your-project.supabase.co"
+            readOnly={isConnected}
           />
+          <p className="text-xs text-muted-foreground">
+            Find this in your Supabase project settings
+          </p>
         </div>
         <div className="space-y-2">
-          <label htmlFor="username" className="text-sm font-medium">Username</label>
+          <label htmlFor="apiKey" className="text-sm font-medium">Supabase Anon Key</label>
           <Input
-            id="username"
-            name="username"
-            value={connectionConfig.username}
-            onChange={handleInputChange}
-            placeholder="Database username"
-          />
-        </div>
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">Password</label>
-          <Input
-            id="password"
-            name="password"
+            id="apiKey"
+            name="apiKey"
             type="password"
-            value={connectionConfig.password}
+            value={connectionConfig.apiKey}
             onChange={handleInputChange}
-            placeholder="Database password"
+            placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            readOnly={isConnected}
           />
+          <p className="text-xs text-muted-foreground">
+            Your public anon key from Supabase project settings
+          </p>
+        </div>
+        <div className="pt-2">
+          {isConnected && (
+            <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+              <div className="h-2 w-2 rounded-full bg-green-600"></div>
+              Connected to Supabase
+            </div>
+          )}
         </div>
       </CardContent>
       <CardFooter className="flex justify-end">
         <Button 
           onClick={handleConnect}
           className="bg-pharmacy-primary hover:bg-blue-700"
-          disabled={isConnected}
+          disabled={isConnected || isLoading || !connectionConfig.url || !connectionConfig.apiKey}
         >
-          {isConnected ? 'Connected' : 'Connect Database'}
+          {isLoading ? 'Connecting...' : isConnected ? 'Connected' : 'Connect to Supabase'}
         </Button>
       </CardFooter>
     </Card>

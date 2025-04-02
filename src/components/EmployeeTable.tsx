@@ -1,31 +1,63 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Search } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Plus, Search, Loader2 } from 'lucide-react';
+import { toast } from "sonner";
+import { supabase } from '@/lib/supabase';
 
-// Mock employee data
-const mockEmployeeData = [
-  { id: 1, name: 'John Doe', employeeId: 'EMP001', shift: 'Morning', salary: '3500' },
-  { id: 2, name: 'Jane Smith', employeeId: 'EMP002', shift: 'Evening', salary: '3200' },
-  { id: 3, name: 'Michael Johnson', employeeId: 'EMP003', shift: 'Night', salary: '3800' },
-  { id: 4, name: 'Emily Brown', employeeId: 'EMP004', shift: 'Morning', salary: '3400' },
-  { id: 5, name: 'William Davis', employeeId: 'EMP005', shift: 'Evening', salary: '3100' },
-];
+interface Employee {
+  id: number;
+  name: string;
+  employee_id: string;
+  shift: string;
+  salary: string;
+}
 
 const EmployeeTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [employeeData, setEmployeeData] = useState(mockEmployeeData);
+  const [employeeData, setEmployeeData] = useState<Employee[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [newEmployee, setNewEmployee] = useState({
     name: '',
-    employeeId: '',
+    employee_id: '',
     shift: '',
     salary: ''
   });
+
+  // Fetch employee data from Supabase
+  const fetchEmployees = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        toast.error("Error fetching employees: " + error.message);
+        return;
+      }
+      
+      if (data) {
+        setEmployeeData(data as Employee[]);
+      }
+    } catch (error) {
+      toast.error("Error fetching employees");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -33,7 +65,7 @@ const EmployeeTable: React.FC = () => {
 
   const filteredEmployees = employeeData.filter(employee => 
     employee.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    employee.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+    employee.employee_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,24 +73,38 @@ const EmployeeTable: React.FC = () => {
     setNewEmployee(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddEmployee = () => {
-    const newId = Math.max(...employeeData.map(employee => employee.id)) + 1;
-    const employeeToAdd = {
-      id: newId,
-      name: newEmployee.name,
-      employeeId: newEmployee.employeeId,
-      shift: newEmployee.shift,
-      salary: newEmployee.salary
-    };
+  const handleAddEmployee = async () => {
+    try {
+      const employeeToAdd = {
+        name: newEmployee.name,
+        employee_id: newEmployee.employee_id,
+        shift: newEmployee.shift,
+        salary: newEmployee.salary
+      };
 
-    setEmployeeData([...employeeData, employeeToAdd]);
-    setIsModalOpen(false);
-    setNewEmployee({
-      name: '',
-      employeeId: '',
-      shift: '',
-      salary: ''
-    });
+      const { data, error } = await supabase
+        .from('employees')
+        .insert([employeeToAdd])
+        .select();
+
+      if (error) {
+        toast.error("Error adding employee: " + error.message);
+        return;
+      }
+
+      toast.success("Employee added successfully!");
+      setEmployeeData([...employeeData, data[0] as Employee]);
+      setIsModalOpen(false);
+      setNewEmployee({
+        name: '',
+        employee_id: '',
+        shift: '',
+        salary: ''
+      });
+    } catch (error) {
+      toast.error("Error adding employee");
+      console.error(error);
+    }
   };
 
   return (
@@ -94,11 +140,20 @@ const EmployeeTable: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEmployees.length > 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-8">
+                    <div className="flex justify-center items-center">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      <span>Loading employee data...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredEmployees.length > 0 ? (
                 filteredEmployees.map((employee) => (
                   <TableRow key={employee.id}>
                     <TableCell>{employee.name}</TableCell>
-                    <TableCell>{employee.employeeId}</TableCell>
+                    <TableCell>{employee.employee_id}</TableCell>
                     <TableCell>{employee.shift}</TableCell>
                     <TableCell>${employee.salary}</TableCell>
                   </TableRow>
@@ -119,6 +174,9 @@ const EmployeeTable: React.FC = () => {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Add New Employee</DialogTitle>
+            <DialogDescription>
+              Add a new employee to your pharmacy staff
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -132,11 +190,11 @@ const EmployeeTable: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="employeeId" className="text-sm font-medium">Employee ID</label>
+              <label htmlFor="employee_id" className="text-sm font-medium">Employee ID</label>
               <Input
-                id="employeeId"
-                name="employeeId"
-                value={newEmployee.employeeId}
+                id="employee_id"
+                name="employee_id"
+                value={newEmployee.employee_id}
                 onChange={handleInputChange}
                 placeholder="e.g. EMP006"
               />
@@ -164,7 +222,14 @@ const EmployeeTable: React.FC = () => {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="button" onClick={handleAddEmployee} className="bg-pharmacy-secondary">Add Employee</Button>
+            <Button 
+              type="button" 
+              onClick={handleAddEmployee} 
+              className="bg-pharmacy-secondary"
+              disabled={!newEmployee.name || !newEmployee.employee_id}
+            >
+              Add Employee
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

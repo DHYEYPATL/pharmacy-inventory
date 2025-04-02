@@ -1,14 +1,85 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DatabaseConnection from './DatabaseConnection';
 import InventoryTable from './InventoryTable';
 import EmployeeTable from './EmployeeTable';
 import { Card, CardContent } from "@/components/ui/card";
-import { Database, PieChart, Users } from 'lucide-react';
+import { Database, PieChart, Users, AlertCircle } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+
+interface DashboardStats {
+  totalDrugs: number;
+  lowStockItems: number;
+  totalEmployees: number;
+}
 
 const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('inventory');
+  const [stats, setStats] = useState<DashboardStats>({
+    totalDrugs: 0,
+    lowStockItems: 0,
+    totalEmployees: 0
+  });
+  const [isConnected, setIsConnected] = useState(false);
+
+  // Check database connection and load stats
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        return;
+      }
+
+      try {
+        // Try to ping the database
+        const { error } = await supabase.from('pharmacy_info').select('*').limit(1);
+        if (!error) {
+          setIsConnected(true);
+          loadStats();
+        }
+      } catch (error) {
+        console.error("Database connection error:", error);
+      }
+    };
+
+    checkConnection();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      // Get total drugs
+      const { data: drugs, error: drugsError } = await supabase
+        .from('inventory')
+        .select('id');
+      
+      if (!drugsError && drugs) {
+        setStats(prev => ({ ...prev, totalDrugs: drugs.length }));
+      }
+
+      // Get low stock items (less than 20 items)
+      const { data: lowStock, error: lowStockError } = await supabase
+        .from('inventory')
+        .select('id')
+        .lt('current_quantity', 20);
+      
+      if (!lowStockError && lowStock) {
+        setStats(prev => ({ ...prev, lowStockItems: lowStock.length }));
+      }
+
+      // Get total employees
+      const { data: employees, error: employeesError } = await supabase
+        .from('employees')
+        .select('id');
+      
+      if (!employeesError && employees) {
+        setStats(prev => ({ ...prev, totalEmployees: employees.length }));
+      }
+    } catch (error) {
+      console.error("Error loading stats:", error);
+      toast.error("Failed to load dashboard statistics");
+    }
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -19,7 +90,7 @@ const Dashboard: React.FC = () => {
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="text-sm font-medium text-gray-500">Total Drugs</p>
-              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">245</h3>
+              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">{stats.totalDrugs}</h3>
             </div>
             <div className="bg-pharmacy-primary/10 p-3 rounded-full">
               <PieChart className="h-6 w-6 text-pharmacy-primary" />
@@ -31,10 +102,10 @@ const Dashboard: React.FC = () => {
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="text-sm font-medium text-gray-500">Low Stock Items</p>
-              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">12</h3>
+              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">{stats.lowStockItems}</h3>
             </div>
             <div className="bg-red-100 p-3 rounded-full">
-              <PieChart className="h-6 w-6 text-red-500" />
+              <AlertCircle className="h-6 w-6 text-red-500" />
             </div>
           </CardContent>
         </Card>
@@ -43,7 +114,7 @@ const Dashboard: React.FC = () => {
           <CardContent className="flex items-center justify-between p-6">
             <div>
               <p className="text-sm font-medium text-gray-500">Total Employees</p>
-              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">5</h3>
+              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">{stats.totalEmployees}</h3>
             </div>
             <div className="bg-pharmacy-secondary/10 p-3 rounded-full">
               <Users className="h-6 w-6 text-pharmacy-secondary" />
