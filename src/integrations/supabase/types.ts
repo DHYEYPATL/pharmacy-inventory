@@ -9,7 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      employee: {
+        Row: {
+          emp_id: number
+          name: string
+          salary: number
+          shift: string
+        }
+        Insert: {
+          emp_id?: number
+          name: string
+          salary: number
+          shift: string
+        }
+        Update: {
+          emp_id?: number
+          name?: string
+          salary?: number
+          shift?: string
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          company: string
+          current_quantity: number
+          drug_id: number
+          drug_name: string
+          expiry_date: string
+          retail_price: number
+          storage_date: string
+        }
+        Insert: {
+          company: string
+          current_quantity: number
+          drug_id?: number
+          drug_name: string
+          expiry_date: string
+          retail_price: number
+          storage_date: string
+        }
+        Update: {
+          company?: string
+          current_quantity?: number
+          drug_id?: number
+          drug_name?: string
+          expiry_date?: string
+          retail_price?: number
+          storage_date?: string
+        }
+        Relationships: []
+      }
+      restocking: {
+        Row: {
+          drug_name: string
+          price_per_unit: number
+          quantity_needed: number
+          restock_id: number
+          supplier: string
+        }
+        Insert: {
+          drug_name: string
+          price_per_unit: number
+          quantity_needed: number
+          restock_id?: number
+          supplier: string
+        }
+        Update: {
+          drug_name?: string
+          price_per_unit?: number
+          quantity_needed?: number
+          restock_id?: number
+          supplier?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

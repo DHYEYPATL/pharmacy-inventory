@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Database } from 'lucide-react';
-import { supabase, initializeSupabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConnectionConfig {
   url: string;
@@ -14,37 +14,44 @@ interface ConnectionConfig {
 
 const DatabaseConnection: React.FC = () => {
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
-    url: import.meta.env.VITE_SUPABASE_URL || '',
-    apiKey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+    url: "https://pvzkcqbiucnukazcmkfh.supabase.co",
+    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2emtjcWJpdWNudWthemNta2ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MTQxNTMsImV4cCI6MjA1OTE5MDE1M30.BUvL7jUUvxqs-5YQoKP89-clX7HsOf9yshfcmjRdBF0"
   });
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check if we're already connected on component load
+  // Check connection on component mount
   useEffect(() => {
-    const checkConnection = async () => {
-      if (connectionConfig.url && connectionConfig.apiKey) {
-        try {
-          // Initialize Supabase with the current config values
-          initializeSupabase(connectionConfig.url, connectionConfig.apiKey);
-          
-          const { data, error } = await supabase.from('pharmacy_info').select('*').limit(1);
-          if (!error) {
-            setIsConnected(true);
-            toast.success("Already connected to Supabase");
-          }
-        } catch (error) {
-          // Connection failed, but no need to show an error since we're just checking
-        }
-      }
-    };
-    
     checkConnection();
   }, []);
 
+  const checkConnection = async () => {
+    if (connectionConfig.url && connectionConfig.apiKey) {
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.from('inventory').select('drug_id').limit(1);
+        
+        if (!error) {
+          setIsConnected(true);
+          toast.success("Successfully connected to Supabase");
+        } else {
+          if (error.code === 'PGRST116') {
+            toast.info("Connected to Supabase, but inventory table not found. Create tables first.");
+          } else {
+            toast.error("Connection error: " + error.message);
+          }
+        }
+      } catch (error) {
+        toast.error("Connection failed: " + (error as Error).message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setConnectionConfig((prev) => ({
+    setConnectionConfig(prev => ({
       ...prev,
       [name]: value
     }));
@@ -60,17 +67,12 @@ const DatabaseConnection: React.FC = () => {
     toast.loading("Connecting to Supabase...");
     
     try {
-      // Initialize Supabase with the new credentials
-      initializeSupabase(connectionConfig.url, connectionConfig.apiKey);
-      
-      // Test the connection by making a simple query
-      const { data, error } = await supabase.from('pharmacy_info').select('*').limit(1);
+      const { error } = await supabase.from('inventory').select('drug_id').limit(1);
       
       if (error) {
         if (error.code === 'PGRST116') {
-          // This is an expected error if the table doesn't exist yet
           setIsConnected(true);
-          toast.success("Connected to Supabase successfully. Please create the required tables.");
+          toast.success("Connected to Supabase. Please create the required tables.");
         } else {
           toast.error("Connection failed: " + error.message);
         }
@@ -110,7 +112,7 @@ const DatabaseConnection: React.FC = () => {
             readOnly={isConnected}
           />
           <p className="text-xs text-muted-foreground">
-            Find this in your Supabase project settings
+            Your Supabase project URL from the settings
           </p>
         </div>
         <div className="space-y-2">
