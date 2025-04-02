@@ -1,19 +1,24 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase URL and anon key from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Initialize with empty values that will be updated later
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+let supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Check if the environment variables are defined
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase URL and anon key must be defined in environment variables');
-}
-
-// Create a Supabase client
-export const supabase = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
+// Create a Supabase client with initial values
+export let supabase = createClient(
+  supabaseUrl || 'https://placeholder-url.supabase.co',
+  supabaseAnonKey || 'placeholder-key'
 );
+
+// Function to update the Supabase client with new credentials
+export const initializeSupabase = (url: string, key: string) => {
+  supabaseUrl = url;
+  supabaseAnonKey = key;
+  supabase = createClient(url, key);
+  
+  // Return the client for convenience
+  return supabase;
+};
 
 export default supabase;

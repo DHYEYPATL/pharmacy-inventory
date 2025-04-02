@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Database } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase, initializeSupabase } from '@/lib/supabase';
 
 interface ConnectionConfig {
   url: string;
@@ -15,7 +15,7 @@ interface ConnectionConfig {
 const DatabaseConnection: React.FC = () => {
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
     url: import.meta.env.VITE_SUPABASE_URL || '',
-    apiKey: ''
+    apiKey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
   });
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,8 +23,11 @@ const DatabaseConnection: React.FC = () => {
   // Check if we're already connected on component load
   useEffect(() => {
     const checkConnection = async () => {
-      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      if (connectionConfig.url && connectionConfig.apiKey) {
         try {
+          // Initialize Supabase with the current config values
+          initializeSupabase(connectionConfig.url, connectionConfig.apiKey);
+          
           const { data, error } = await supabase.from('pharmacy_info').select('*').limit(1);
           if (!error) {
             setIsConnected(true);
@@ -48,15 +51,29 @@ const DatabaseConnection: React.FC = () => {
   };
 
   const handleConnect = async () => {
+    if (!connectionConfig.url || !connectionConfig.apiKey) {
+      toast.error("Supabase URL and API Key are required");
+      return;
+    }
+    
     setIsLoading(true);
     toast.loading("Connecting to Supabase...");
     
     try {
+      // Initialize Supabase with the new credentials
+      initializeSupabase(connectionConfig.url, connectionConfig.apiKey);
+      
       // Test the connection by making a simple query
       const { data, error } = await supabase.from('pharmacy_info').select('*').limit(1);
       
       if (error) {
-        toast.error("Connection failed: " + error.message);
+        if (error.code === 'PGRST116') {
+          // This is an expected error if the table doesn't exist yet
+          setIsConnected(true);
+          toast.success("Connected to Supabase successfully. Please create the required tables.");
+        } else {
+          toast.error("Connection failed: " + error.message);
+        }
         setIsLoading(false);
         return;
       }
