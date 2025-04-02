@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DatabaseConnection from './DatabaseConnection';
@@ -6,7 +5,7 @@ import InventoryTable from './InventoryTable';
 import EmployeeTable from './EmployeeTable';
 import { Card, CardContent } from "@/components/ui/card";
 import { Database, PieChart, Users, AlertCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface DashboardStats {
@@ -27,13 +26,9 @@ const Dashboard: React.FC = () => {
   // Check database connection and load stats
   useEffect(() => {
     const checkConnection = async () => {
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        return;
-      }
-
       try {
         // Try to ping the database
-        const { error } = await supabase.from('pharmacy_info').select('*').limit(1);
+        const { error } = await supabase.from('inventory').select('drug_id').limit(1);
         if (!error) {
           setIsConnected(true);
           loadStats();
@@ -51,7 +46,7 @@ const Dashboard: React.FC = () => {
       // Get total drugs
       const { data: drugs, error: drugsError } = await supabase
         .from('inventory')
-        .select('id');
+        .select('drug_id');
       
       if (!drugsError && drugs) {
         setStats(prev => ({ ...prev, totalDrugs: drugs.length }));
@@ -60,7 +55,7 @@ const Dashboard: React.FC = () => {
       // Get low stock items (less than 20 items)
       const { data: lowStock, error: lowStockError } = await supabase
         .from('inventory')
-        .select('id')
+        .select('drug_id')
         .lt('current_quantity', 20);
       
       if (!lowStockError && lowStock) {
@@ -69,8 +64,8 @@ const Dashboard: React.FC = () => {
 
       // Get total employees
       const { data: employees, error: employeesError } = await supabase
-        .from('employees')
-        .select('id');
+        .from('employee')
+        .select('emp_id');
       
       if (!employeesError && employees) {
         setStats(prev => ({ ...prev, totalEmployees: employees.length }));

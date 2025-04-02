@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Search, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Drug {
-  id: number;
-  name: string;
+  drug_id: number;
+  drug_name: string;
   company: string;
   storage_date: string;
   expiry_date: string;
@@ -25,7 +25,7 @@ const InventoryTable: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [newDrug, setNewDrug] = useState({
-    name: '',
+    drug_name: '',
     company: '',
     storage_date: '',
     expiry_date: '',
@@ -40,7 +40,7 @@ const InventoryTable: React.FC = () => {
       const { data, error } = await supabase
         .from('inventory')
         .select('*')
-        .order('name');
+        .order('drug_name');
         
       if (error) {
         toast.error("Error fetching inventory: " + error.message);
@@ -68,7 +68,7 @@ const InventoryTable: React.FC = () => {
   };
 
   const filteredInventory = inventoryData.filter(drug => 
-    drug.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    drug.drug_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     drug.company.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -80,7 +80,7 @@ const InventoryTable: React.FC = () => {
   const handleAddDrug = async () => {
     try {
       const drugToAdd = {
-        name: newDrug.name,
+        drug_name: newDrug.drug_name,
         company: newDrug.company,
         storage_date: newDrug.storage_date,
         expiry_date: newDrug.expiry_date,
@@ -102,7 +102,7 @@ const InventoryTable: React.FC = () => {
       setInventoryData([...inventoryData, data[0] as Drug]);
       setIsModalOpen(false);
       setNewDrug({
-        name: '',
+        drug_name: '',
         company: '',
         storage_date: '',
         expiry_date: '',

@@ -7,14 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Search, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Employee {
-  id: number;
+  emp_id: number;
   name: string;
-  employee_id: string;
   shift: string;
-  salary: string;
+  salary: number;
 }
 
 const EmployeeTable: React.FC = () => {
@@ -24,7 +23,6 @@ const EmployeeTable: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [newEmployee, setNewEmployee] = useState({
     name: '',
-    employee_id: '',
     shift: '',
     salary: ''
   });
@@ -34,7 +32,7 @@ const EmployeeTable: React.FC = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('employees')
+        .from('employee')
         .select('*')
         .order('name');
         
@@ -64,8 +62,7 @@ const EmployeeTable: React.FC = () => {
   };
 
   const filteredEmployees = employeeData.filter(employee => 
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    employee.employee_id.toLowerCase().includes(searchTerm.toLowerCase())
+    employee.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,13 +74,12 @@ const EmployeeTable: React.FC = () => {
     try {
       const employeeToAdd = {
         name: newEmployee.name,
-        employee_id: newEmployee.employee_id,
         shift: newEmployee.shift,
-        salary: newEmployee.salary
+        salary: parseFloat(newEmployee.salary)
       };
 
       const { data, error } = await supabase
-        .from('employees')
+        .from('employee')
         .insert([employeeToAdd])
         .select();
 
@@ -97,7 +93,6 @@ const EmployeeTable: React.FC = () => {
       setIsModalOpen(false);
       setNewEmployee({
         name: '',
-        employee_id: '',
         shift: '',
         salary: ''
       });
@@ -122,7 +117,7 @@ const EmployeeTable: React.FC = () => {
         <div className="mb-4 relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search by employee name or ID..."
+            placeholder="Search by employee name..."
             value={searchTerm}
             onChange={handleSearch}
             className="pl-10"
@@ -134,7 +129,6 @@ const EmployeeTable: React.FC = () => {
             <TableHeader className="bg-pharmacy-accent">
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Employee ID</TableHead>
                 <TableHead>Shift</TableHead>
                 <TableHead>Salary</TableHead>
               </TableRow>
@@ -142,7 +136,7 @@ const EmployeeTable: React.FC = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={3} className="text-center py-8">
                     <div className="flex justify-center items-center">
                       <Loader2 className="h-6 w-6 animate-spin mr-2" />
                       <span>Loading employee data...</span>
@@ -151,16 +145,15 @@ const EmployeeTable: React.FC = () => {
                 </TableRow>
               ) : filteredEmployees.length > 0 ? (
                 filteredEmployees.map((employee) => (
-                  <TableRow key={employee.id}>
+                  <TableRow key={employee.emp_id}>
                     <TableCell>{employee.name}</TableCell>
-                    <TableCell>{employee.employee_id}</TableCell>
                     <TableCell>{employee.shift}</TableCell>
                     <TableCell>${employee.salary}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4">
+                  <TableCell colSpan={3} className="text-center py-4">
                     No employees found matching your search.
                   </TableCell>
                 </TableRow>
@@ -190,16 +183,6 @@ const EmployeeTable: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="employee_id" className="text-sm font-medium">Employee ID</label>
-              <Input
-                id="employee_id"
-                name="employee_id"
-                value={newEmployee.employee_id}
-                onChange={handleInputChange}
-                placeholder="e.g. EMP006"
-              />
-            </div>
-            <div className="space-y-2">
               <label htmlFor="shift" className="text-sm font-medium">Shift</label>
               <Input
                 id="shift"
@@ -226,7 +209,7 @@ const EmployeeTable: React.FC = () => {
               type="button" 
               onClick={handleAddEmployee} 
               className="bg-pharmacy-secondary"
-              disabled={!newEmployee.name || !newEmployee.employee_id}
+              disabled={!newEmployee.name || !newEmployee.shift}
             >
               Add Employee
             </Button>
