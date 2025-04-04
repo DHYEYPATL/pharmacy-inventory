@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Search, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 interface Drug {
   drug_id: number;
@@ -15,7 +15,7 @@ interface Drug {
   company: string;
   storage_date: string;
   expiry_date: string;
-  retail_price: string;
+  retail_price: number;
   current_quantity: number;
 }
 
@@ -84,7 +84,7 @@ const InventoryTable: React.FC = () => {
         company: newDrug.company,
         storage_date: newDrug.storage_date,
         expiry_date: newDrug.expiry_date,
-        retail_price: newDrug.retail_price,
+        retail_price: parseFloat(newDrug.retail_price),
         current_quantity: parseInt(newDrug.current_quantity)
       };
 
@@ -161,8 +161,8 @@ const InventoryTable: React.FC = () => {
                 </TableRow>
               ) : filteredInventory.length > 0 ? (
                 filteredInventory.map((drug) => (
-                  <TableRow key={drug.id}>
-                    <TableCell>{drug.name}</TableCell>
+                  <TableRow key={drug.drug_id}>
+                    <TableCell>{drug.drug_name}</TableCell>
                     <TableCell>{drug.company}</TableCell>
                     <TableCell>{drug.storage_date}</TableCell>
                     <TableCell>{drug.expiry_date}</TableCell>
@@ -193,11 +193,11 @@ const InventoryTable: React.FC = () => {
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium">Drug Name</label>
+                <label htmlFor="drug_name" className="text-sm font-medium">Drug Name</label>
                 <Input
-                  id="name"
-                  name="name"
-                  value={newDrug.name}
+                  id="drug_name"
+                  name="drug_name"
+                  value={newDrug.drug_name}
                   onChange={handleInputChange}
                   placeholder="Enter drug name"
                 />
@@ -265,7 +265,7 @@ const InventoryTable: React.FC = () => {
               type="button" 
               onClick={handleAddDrug} 
               className="bg-pharmacy-primary"
-              disabled={!newDrug.name || !newDrug.company}
+              disabled={!newDrug.drug_name || !newDrug.company}
             >
               Add Drug
             </Button>

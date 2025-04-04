@@ -1,11 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DatabaseConnection from './DatabaseConnection';
 import InventoryTable from './InventoryTable';
 import EmployeeTable from './EmployeeTable';
+import LowStockTable from './LowStockTable';
 import { Card, CardContent } from "@/components/ui/card";
 import { Database, PieChart, Users, AlertCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface DashboardStats {
@@ -52,11 +54,11 @@ const Dashboard: React.FC = () => {
         setStats(prev => ({ ...prev, totalDrugs: drugs.length }));
       }
 
-      // Get low stock items (less than 20 items)
+      // Get low stock items (less than 25 items)
       const { data: lowStock, error: lowStockError } = await supabase
         .from('inventory')
         .select('drug_id')
-        .lt('current_quantity', 20);
+        .lt('current_quantity', 25);
       
       if (!lowStockError && lowStock) {
         setStats(prev => ({ ...prev, lowStockItems: lowStock.length }));
@@ -125,9 +127,12 @@ const Dashboard: React.FC = () => {
         
         <div className="md:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-2 mb-6">
+            <TabsList className="grid grid-cols-3 mb-6">
               <TabsTrigger value="inventory" className="flex items-center gap-2">
                 <Database size={16} /> Inventory
+              </TabsTrigger>
+              <TabsTrigger value="lowstock" className="flex items-center gap-2">
+                <AlertCircle size={16} /> Low Stock
               </TabsTrigger>
               <TabsTrigger value="employees" className="flex items-center gap-2">
                 <Users size={16} /> Employees
@@ -136,6 +141,10 @@ const Dashboard: React.FC = () => {
             
             <TabsContent value="inventory" className="mt-0">
               <InventoryTable />
+            </TabsContent>
+
+            <TabsContent value="lowstock" className="mt-0">
+              <LowStockTable />
             </TabsContent>
             
             <TabsContent value="employees" className="mt-0">
