@@ -5,8 +5,9 @@ import DatabaseConnection from './DatabaseConnection';
 import InventoryTable from './InventoryTable';
 import EmployeeTable from './EmployeeTable';
 import LowStockTable from './LowStockTable';
+import RestockingTable from './RestockingTable';
 import { Card, CardContent } from "@/components/ui/card";
-import { Database, PieChart, Users, AlertCircle } from 'lucide-react';
+import { Database, PieChart, Users, AlertCircle, PackageOpen } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
@@ -14,6 +15,7 @@ interface DashboardStats {
   totalDrugs: number;
   lowStockItems: number;
   totalEmployees: number;
+  restockingItems: number;
 }
 
 const Dashboard: React.FC = () => {
@@ -21,7 +23,8 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalDrugs: 0,
     lowStockItems: 0,
-    totalEmployees: 0
+    totalEmployees: 0,
+    restockingItems: 0
   });
   const [isConnected, setIsConnected] = useState(false);
 
@@ -72,6 +75,15 @@ const Dashboard: React.FC = () => {
       if (!employeesError && employees) {
         setStats(prev => ({ ...prev, totalEmployees: employees.length }));
       }
+
+      // Get total restocking items
+      const { data: restocking, error: restockingError } = await supabase
+        .from('restocking')
+        .select('restock_id');
+      
+      if (!restockingError && restocking) {
+        setStats(prev => ({ ...prev, restockingItems: restocking.length }));
+      }
     } catch (error) {
       console.error("Error loading stats:", error);
       toast.error("Failed to load dashboard statistics");
@@ -82,7 +94,7 @@ const Dashboard: React.FC = () => {
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6 text-pharmacy-text">Pharmacy Management System</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardContent className="flex items-center justify-between p-6">
             <div>
@@ -118,6 +130,18 @@ const Dashboard: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        
+        <Card>
+          <CardContent className="flex items-center justify-between p-6">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Restocking Items</p>
+              <h3 className="text-2xl font-bold text-pharmacy-text mt-1">{stats.restockingItems}</h3>
+            </div>
+            <div className="bg-amber-100 p-3 rounded-full">
+              <PackageOpen className="h-6 w-6 text-amber-500" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -127,12 +151,15 @@ const Dashboard: React.FC = () => {
         
         <div className="md:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-3 mb-6">
+            <TabsList className="grid grid-cols-4 mb-6">
               <TabsTrigger value="inventory" className="flex items-center gap-2">
                 <Database size={16} /> Inventory
               </TabsTrigger>
               <TabsTrigger value="lowstock" className="flex items-center gap-2">
                 <AlertCircle size={16} /> Low Stock
+              </TabsTrigger>
+              <TabsTrigger value="restocking" className="flex items-center gap-2">
+                <PackageOpen size={16} /> Restocking
               </TabsTrigger>
               <TabsTrigger value="employees" className="flex items-center gap-2">
                 <Users size={16} /> Employees
@@ -145,6 +172,10 @@ const Dashboard: React.FC = () => {
 
             <TabsContent value="lowstock" className="mt-0">
               <LowStockTable />
+            </TabsContent>
+            
+            <TabsContent value="restocking" className="mt-0">
+              <RestockingTable />
             </TabsContent>
             
             <TabsContent value="employees" className="mt-0">
