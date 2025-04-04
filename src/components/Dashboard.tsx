@@ -33,7 +33,7 @@ const Dashboard: React.FC = () => {
     const checkConnection = async () => {
       try {
         // Try to ping the database
-        const { error } = await supabase.from('employee').select('emp_id').limit(1);
+        const { error } = await supabase.from('inventory').select('drug_id').limit(1);
         if (!error) {
           setIsConnected(true);
           loadStats();
@@ -50,8 +50,8 @@ const Dashboard: React.FC = () => {
     try {
       // Get total drugs
       const { data: drugs, error: drugsError } = await supabase
-        .from('employee')
-        .select('emp_id');
+        .from('inventory')
+        .select('drug_id');
       
       if (!drugsError && drugs) {
         setStats(prev => ({ ...prev, totalDrugs: drugs.length }));
@@ -59,9 +59,9 @@ const Dashboard: React.FC = () => {
 
       // Get low stock items (less than 25 items)
       const { data: lowStock, error: lowStockError } = await supabase
-        .from('employee')
-        .select('emp_id')
-        .limit(5);
+        .from('inventory')
+        .select('drug_id')
+        .lt('current_quantity', 25);
       
       if (!lowStockError && lowStock) {
         setStats(prev => ({ ...prev, lowStockItems: lowStock.length }));
