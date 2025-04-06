@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Database } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 interface ConnectionConfig {
   url: string;
@@ -38,33 +37,15 @@ const DatabaseConnection: React.FC = () => {
     toast.loading("Connecting to Supabase...");
     
     try {
-      // Try to connect to inventory table
-      const customSupabase = { 
-        from: (table: string) => ({
-          select: (columns: string) => ({
-            limit: (num: number) => ({
-              then: async (callback: Function) => {
-                try {
-                  const { data, error } = await supabase
-                    .from(table)
-                    .select(columns)
-                    .limit(num);
-                  
-                  return callback({ data, error });
-                } catch (err) {
-                  return callback({ data: null, error: err });
-                }
-              }
-            })
-          })
-        })
-      };
+      // Create a temporary Supabase client with the provided credentials
+      const { createClient } = await import('@supabase/supabase-js');
+      const tempSupabase = createClient(connectionConfig.url, connectionConfig.apiKey);
       
-      const { data, error } = await customSupabase
+      // Try to connect to inventory table
+      const { data, error } = await tempSupabase
         .from('inventory')
         .select('drug_id')
-        .limit(1)
-        .then(({ data, error }) => ({ data, error }));
+        .limit(1);
       
       if (error) {
         if (error.code === 'PGRST116') {
@@ -77,8 +58,16 @@ const DatabaseConnection: React.FC = () => {
         return;
       }
       
+      // If we're here, it means we successfully connected
+      // Save the connection details to localStorage for later use
+      localStorage.setItem('supabaseUrl', connectionConfig.url);
+      localStorage.setItem('supabaseKey', connectionConfig.apiKey);
+      
       setIsConnected(true);
       toast.success("Successfully connected to Supabase");
+
+      // Reload the page to apply the new connection
+      window.location.reload();
     } catch (error) {
       toast.error("Connection failed: " + (error as Error).message);
     } finally {
