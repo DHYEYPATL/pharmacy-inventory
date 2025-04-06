@@ -35,6 +35,13 @@ const Dashboard: React.FC = () => {
 
   const checkConnection = async () => {
     try {
+      // First check if supabase client exists
+      if (!supabase) {
+        // If client is null, credentials are missing
+        setIsConnected(false);
+        return;
+      }
+
       const { data, error } = await supabase.from('inventory').select('drug_id').limit(1);
       if (!error && data) {
         setIsConnected(true);
@@ -42,10 +49,13 @@ const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error("Database connection check failed:", error);
+      setIsConnected(false);
     }
   };
 
   const loadStats = async () => {
+    if (!supabase) return;
+    
     try {
       // Get total drugs
       const { data: drugs, error: drugsError } = await supabase
@@ -95,7 +105,10 @@ const Dashboard: React.FC = () => {
       <div className="container mx-auto p-6 flex flex-col items-center">
         <h1 className="text-3xl font-bold mb-6 text-pharmacy-text">Pharmacy Management System</h1>
         <div className="max-w-md w-full">
-          <DatabaseConnection />
+          <DatabaseConnection onConnect={() => {
+            // Reload the page to initialize Supabase with new credentials
+            window.location.reload();
+          }} />
         </div>
       </div>
     );
@@ -109,7 +122,7 @@ const Dashboard: React.FC = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-1">
-          <DatabaseConnection />
+          <DatabaseConnection onConnect={() => window.location.reload()} />
         </div>
         
         <div className="md:col-span-2">

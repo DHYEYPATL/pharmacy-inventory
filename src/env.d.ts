@@ -1,11 +1,5 @@
 
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL: string
-  readonly VITE_SUPABASE_ANON_KEY: string
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv
-}
+// This file is kept for compatibility but we're not using environment variables
+// for Supabase configuration. Instead, we're using localStorage.

@@ -11,7 +11,11 @@ interface ConnectionConfig {
   apiKey: string;
 }
 
-const DatabaseConnection: React.FC = () => {
+interface DatabaseConnectionProps {
+  onConnect?: () => void;
+}
+
+const DatabaseConnection: React.FC<DatabaseConnectionProps> = ({ onConnect }) => {
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
     url: "",
     apiKey: ""
@@ -66,8 +70,10 @@ const DatabaseConnection: React.FC = () => {
       setIsConnected(true);
       toast.success("Successfully connected to Supabase");
 
-      // Reload the page to apply the new connection
-      window.location.reload();
+      // Call onConnect callback if provided
+      if (onConnect) {
+        onConnect();
+      }
     } catch (error) {
       toast.error("Connection failed: " + (error as Error).message);
     } finally {
