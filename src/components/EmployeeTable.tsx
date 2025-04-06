@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2 } from 'lucide-react';
+import { Plus, Search, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
 
@@ -21,6 +20,7 @@ const EmployeeTable: React.FC = () => {
   const [employeeData, setEmployeeData] = useState<Employee[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
   const [newEmployee, setNewEmployee] = useState({
     name: '',
     shift: '',
@@ -31,6 +31,13 @@ const EmployeeTable: React.FC = () => {
   const fetchEmployees = async () => {
     setIsLoading(true);
     try {
+      // Check if supabase client exists
+      if (!supabase) {
+        setConnectionError(true);
+        setIsLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('employee')
         .select('*')
@@ -72,6 +79,11 @@ const EmployeeTable: React.FC = () => {
 
   const handleAddEmployee = async () => {
     try {
+      if (!supabase) {
+        toast.error("Database connection not available");
+        return;
+      }
+
       const employeeToAdd = {
         name: newEmployee.name,
         shift: newEmployee.shift,
@@ -101,6 +113,26 @@ const EmployeeTable: React.FC = () => {
       console.error(error);
     }
   };
+
+  // Show error if no connection is available
+  if (connectionError) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="bg-red-500 text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle size={20} />
+            Connection Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 text-center">
+          <p className="mb-4">Database connection not available. Please connect to your Supabase database.</p>
+          <Button onClick={() => window.location.reload()} className="bg-red-500 hover:bg-red-600">
+            Reconnect
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

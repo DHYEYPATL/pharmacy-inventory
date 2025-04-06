@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Search, Loader2 } from 'lucide-react';
+import { Plus, Search, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
 
@@ -22,6 +21,7 @@ const RestockingTable: React.FC = () => {
   const [restockingData, setRestockingData] = useState<RestockItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
   const [newRestockItem, setNewRestockItem] = useState({
     drug_name: '',
     quantity_needed: '',
@@ -33,6 +33,13 @@ const RestockingTable: React.FC = () => {
   const fetchRestockingItems = async () => {
     setIsLoading(true);
     try {
+      // Check if supabase client exists
+      if (!supabase) {
+        setConnectionError(true);
+        setIsLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('restocking')
         .select('*')
@@ -75,6 +82,11 @@ const RestockingTable: React.FC = () => {
 
   const handleAddRestockItem = async () => {
     try {
+      if (!supabase) {
+        toast.error("Database connection not available");
+        return;
+      }
+
       const itemToAdd = {
         drug_name: newRestockItem.drug_name,
         quantity_needed: parseInt(newRestockItem.quantity_needed),
@@ -106,6 +118,26 @@ const RestockingTable: React.FC = () => {
       console.error(error);
     }
   };
+
+  // Show error if no connection is available
+  if (connectionError) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="bg-red-500 text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle size={20} />
+            Connection Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 text-center">
+          <p className="mb-4">Database connection not available. Please connect to your Supabase database.</p>
+          <Button onClick={() => window.location.reload()} className="bg-red-500 hover:bg-red-600">
+            Reconnect
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

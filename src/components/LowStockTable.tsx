@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Search, AlertCircle } from 'lucide-react';
+import { Loader2, Search, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from '@/lib/supabase';
 
@@ -21,11 +21,19 @@ const LowStockTable: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [lowStockItems, setLowStockItems] = useState<DrugItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
 
   // Fetch low stock drugs from Supabase
   const fetchLowStockItems = async () => {
     setIsLoading(true);
     try {
+      // Check if supabase client exists
+      if (!supabase) {
+        setConnectionError(true);
+        setIsLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('inventory')
         .select('*')
@@ -61,6 +69,26 @@ const LowStockTable: React.FC = () => {
     drug.drug_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     drug.company.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Show error if no connection is available
+  if (connectionError) {
+    return (
+      <Card className="w-full">
+        <CardHeader className="bg-red-500 text-white rounded-t-lg">
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle size={20} />
+            Connection Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 text-center">
+          <p className="mb-4">Database connection not available. Please connect to your Supabase database.</p>
+          <Button onClick={() => window.location.reload()} className="bg-red-500 hover:bg-red-600">
+            Reconnect
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">

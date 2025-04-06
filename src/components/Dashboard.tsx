@@ -22,36 +22,51 @@ const Dashboard: React.FC = () => {
     restockingItems: 0
   });
   const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Check if supabase credentials are available
+  // Check if supabase credentials are available and test connection
   useEffect(() => {
-    const supabaseUrl = localStorage.getItem('supabaseUrl');
-    const supabaseKey = localStorage.getItem('supabaseKey');
-    
-    if (supabaseUrl && supabaseKey) {
-      checkConnection();
-    }
-  }, []);
-
-  const checkConnection = async () => {
-    try {
-      // First check if supabase client exists
-      if (!supabase) {
-        // If client is null, credentials are missing
+    const checkConnection = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Check if supabase client exists and test connection
+        if (supabase) {
+          try {
+            // Test connection by attempting to query
+            const { data, error } = await supabase.from('inventory').select('drug_id').limit(1);
+            
+            if (!error) {
+              setIsConnected(true);
+              loadStats();
+            } else {
+              console.error("Database connection error:", error);
+              setIsConnected(false);
+              // Clear any invalid credentials
+              if (error.code === 'PGRST16') {
+                localStorage.removeItem('supabaseUrl');
+                localStorage.removeItem('supabaseKey');
+                toast.error("Invalid database credentials. Please reconnect.");
+              }
+            }
+          } catch (error) {
+            console.error("Connection test failed:", error);
+            setIsConnected(false);
+          }
+        } else {
+          // No supabase client available
+          setIsConnected(false);
+        }
+      } catch (error) {
+        console.error("Connection check failed:", error);
         setIsConnected(false);
-        return;
+      } finally {
+        setIsLoading(false);
       }
+    };
 
-      const { data, error } = await supabase.from('inventory').select('drug_id').limit(1);
-      if (!error && data) {
-        setIsConnected(true);
-        loadStats();
-      }
-    } catch (error) {
-      console.error("Database connection check failed:", error);
-      setIsConnected(false);
-    }
-  };
+    checkConnection();
+  }, []);
 
   const loadStats = async () => {
     if (!supabase) return;
@@ -99,11 +114,14 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Show connection screen if not connected
-  if (!isConnected) {
+  // Always show connection form, even when loading
+  if (isLoading || !isConnected) {
     return (
       <div className="container mx-auto p-6 flex flex-col items-center">
         <h1 className="text-3xl font-bold mb-6 text-pharmacy-text">Pharmacy Management System</h1>
+        <p className="text-center mb-8 text-gray-600 max-w-lg">
+          Welcome to the Pharmacy Management System. Please connect to your Supabase database to continue.
+        </p>
         <div className="max-w-md w-full">
           <DatabaseConnection onConnect={() => {
             // Reload the page to initialize Supabase with new credentials
