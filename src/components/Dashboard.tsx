@@ -28,22 +28,37 @@ const Dashboard: React.FC = () => {
   });
   const [isConnected, setIsConnected] = useState(false);
 
-  // Check database connection and load stats
+  // This effect will run when the component mounts to check if we're already connected
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        // Try to ping the database
-        const { error } = await supabase.from('inventory').select('drug_id').limit(1);
-        if (!error) {
+        const { data, error } = await supabase.from('inventory').select('drug_id').limit(1);
+        if (!error && data) {
           setIsConnected(true);
           loadStats();
         }
       } catch (error) {
-        console.error("Database connection error:", error);
+        console.error("Database connection check failed:", error);
       }
     };
 
     checkConnection();
+  }, []);
+
+  // Set up a listener for authentication state changes from Supabase
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setIsConnected(true);
+        loadStats();
+      } else if (event === 'SIGNED_OUT') {
+        setIsConnected(false);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const loadStats = async () => {

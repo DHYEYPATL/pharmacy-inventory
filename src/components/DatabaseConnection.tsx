@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
@@ -14,44 +14,11 @@ interface ConnectionConfig {
 
 const DatabaseConnection: React.FC = () => {
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig>({
-    url: "https://pvzkcqbiucnukazcmkfh.supabase.co",
-    apiKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2emtjcWJpdWNudWthemNta2ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MTQxNTMsImV4cCI6MjA1OTE5MDE1M30.BUvL7jUUvxqs-5YQoKP89-clX7HsOf9yshfcmjRdBF0"
+    url: "",
+    apiKey: ""
   });
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Check connection on component mount
-  useEffect(() => {
-    checkConnection();
-  }, []);
-
-  const checkConnection = async () => {
-    if (connectionConfig.url && connectionConfig.apiKey) {
-      setIsLoading(true);
-      try {
-        // Try to connect to inventory table since we know it exists now
-        const { data, error } = await supabase
-          .from('inventory')
-          .select('drug_id')
-          .limit(1);
-        
-        if (!error) {
-          setIsConnected(true);
-          toast.success("Successfully connected to Supabase");
-        } else {
-          if (error.code === 'PGRST116') {
-            toast.info("Connected to Supabase, but inventory table not found. Create tables first.");
-          } else {
-            toast.error("Connection error: " + error.message);
-          }
-        }
-      } catch (error) {
-        toast.error("Connection failed: " + (error as Error).message);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -72,10 +39,32 @@ const DatabaseConnection: React.FC = () => {
     
     try {
       // Try to connect to inventory table
-      const { data, error } = await supabase
+      const customSupabase = { 
+        from: (table: string) => ({
+          select: (columns: string) => ({
+            limit: (num: number) => ({
+              then: async (callback: Function) => {
+                try {
+                  const { data, error } = await supabase
+                    .from(table)
+                    .select(columns)
+                    .limit(num);
+                  
+                  return callback({ data, error });
+                } catch (err) {
+                  return callback({ data: null, error: err });
+                }
+              }
+            })
+          })
+        })
+      };
+      
+      const { data, error } = await customSupabase
         .from('inventory')
         .select('drug_id')
-        .limit(1);
+        .limit(1)
+        .then(({ data, error }) => ({ data, error }));
       
       if (error) {
         if (error.code === 'PGRST116') {
