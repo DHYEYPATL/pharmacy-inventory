@@ -64,11 +64,11 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
                 pharmacy: {
-                    primary: '#4A90E2',
-                    secondary: '#5CC2AB',
-                    accent: '#F0F4F9',
-                    text: '#2D3748',
-                    light: '#E2F0FF'
+                    primary: '#0EA5E9', // Ocean blue
+                    secondary: '#555555', // Dark grey
+                    accent: '#222222',   // Near black
+                    text: '#F1F1F1',     // Light grey text
+                    light: '#333333'     // Dark grey background
                 }
 			},
 			borderRadius: {

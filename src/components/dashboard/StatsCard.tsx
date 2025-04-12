@@ -14,7 +14,7 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, iconBgColor }
     <Card>
       <CardContent className="flex items-center justify-between p-6">
         <div>
-          <p className="text-sm font-medium text-gray-500">{title}</p>
+          <p className="text-sm font-medium text-gray-400">{title}</p>
           <h3 className="text-2xl font-bold text-pharmacy-text mt-1">{value}</h3>
         </div>
         <div className={`${iconBgColor} p-3 rounded-full`}>
